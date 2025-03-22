@@ -1,0 +1,10 @@
+*.pyc
+__pycache__
+
+.vscode
+.DS_Store
+.pytest_cache
+
+dist/*
+build/*
+tokens/*
