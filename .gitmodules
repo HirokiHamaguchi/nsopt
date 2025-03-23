@@ -1,0 +1,6 @@
+[submodule "submodules/IRPNM"]
+	path = submodules/IRPNM
+	url = https://github.com/SCUT-OptGroup/IRPNM.git
+[submodule "submodules/accelerated-lm"]
+	path = submodules/accelerated-lm
+	url = https://github.com/n-marumo/accelerated-lm.git
