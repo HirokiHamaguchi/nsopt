@@ -1,38 +1,27 @@
-import functools
-import jax
 import jax.numpy as jnp
-from .base import ProblemBase
+from .base import OptimizationProblem
+from nsopt.regularizer.nuclear import NuclearNormRegularizer
 
-jax.config.update("jax_enable_x64", True)
 
+def make_matrix_completion_problem(
+    M: jnp.ndarray, Omega: jnp.ndarray, lam: float, X0: jnp.ndarray
+) -> OptimizationProblem:
+    """
+    行列補完問題を作成する。
+    M: 完成すべき行列
+    Omega: 観測マスク
+    lam: 正則化パラメータ
+    X0: 初期推定値
+    """
 
-class Problem(ProblemBase):
-    def __init__(self, M, Omega, lam, X0):
-        super().__init__()
-        self.M = M
-        self.Omega = Omega  # Observation mask
-        self.lam = lam  # Regularization parameter
-        self.x0 = X0.flatten()
+    # 行列サイズの取得
+    n, m = M.shape
 
-    @functools.partial(jax.jit, static_argnums=(0,))
-    def f(self, x):
-        X = jnp.reshape(x, self.M.shape)
-        # Squared Frobenius norm loss on observed entries
-        diff = self.Omega * (X - self.M)
+    # 目的関数 f(x)
+    def f(x):
+        X = jnp.reshape(x, (n, m))
+        # 観測されたエントリのFrobeniusノルムの二乗誤差
+        diff = Omega * (X - M)
         return 0.5 * jnp.sum(diff**2)
 
-    @functools.partial(jax.jit, static_argnums=(0,))
-    def g(self, x):
-        X = jnp.reshape(x, self.M.shape)
-        # Nuclear norm regularization term
-        return self.lam * jnp.sum(jnp.linalg.svd(X, compute_uv=False))
-
-    @functools.partial(jax.jit, static_argnums=(0,))
-    def g_prox(self, x, eta):
-        X = jnp.reshape(x, self.M.shape)
-        # Singular Value Thresholding (SVT): prox for nuclear norm
-        U, S, Vt = jnp.linalg.svd(X, full_matrices=False)
-        # Soft-thresholding on singular values
-        S_thresh = jnp.maximum(S - eta * self.lam, 0)
-        ret = U @ jnp.diag(S_thresh) @ Vt
-        return ret.flatten()
+    return OptimizationProblem(f=f, regularizer=NuclearNormRegularizer(lam))
